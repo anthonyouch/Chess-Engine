@@ -10,8 +10,12 @@ simple_heuristics = {
     'b':3,
     'n':3
 }
+WHITE = 'WHITE'
+BLACK = 'BLACK'
 
-def Evaluate():
+board = chess.Board("4kb1r/p1pp1ppp/P3pq2/8/Qr1P4/8/4PPPP/RNB1KBNR w KQk - 1 13")
+
+def evaluate(color):
     white_score = 0
     black_score = 0
     for square in chess.SQUARES:
@@ -23,67 +27,43 @@ def Evaluate():
         if piece_symbol is not None:
             if piece_symbol.isupper():
                 white_score += simple_heuristics[piece_symbol.lower()]
-                # it is a black piece
+                # it is a white piece
             else:
                 black_score += simple_heuristics[piece_symbol]
-                # it's a white piece
+                # it's a black piece
 
     score = white_score - black_score
 
-    if board.turn is True:
+    if color == 1:
         return score
     else:
         return -score
 
-def MinMax(depth):
-    if not player_is_white:
-        if board.turn:
-            return Max(depth)
-        else:
-            return Min(depth)
-    else:
-        if board.turn:
-            return Min(depth)
-        else:
-            return Max(depth)
-
-
-def Max(depth):
+best_move = None
+def negamax(depth, color):
     global best_move
-    best = -10000000
     if depth <= 0:
-        return Evaluate()
-    for move in list(board.legal_moves):
-        # play the move
-        executed_move = chess.Move.from_uci(str(move))
-        board.push(executed_move)
-        score = Min(depth - 1)
-        board.pop()
-        if score >= best:
-            all_moves.append((executed_move, score))
-            best = score
-    return best
+        return color * evaluate(color), None
+    best = -1000000
 
-def Min(depth):
-    best = 10000000
-    if depth <= 0:
-        return Evaluate()
     for move in list(board.legal_moves):
         # play the move
         executed_move = chess.Move.from_uci(str(move))
         board.push(executed_move)
-        score = Max(depth - 1)
+
+        score = negamax(depth -1, color * -1)[0]
+        if score >= best:
+            best = max(best, score)
+            best_move = move
         board.pop()
-        if score <= best:
-            best = score
-    return best
+    return -best, best_move
 
 all_moves = []
-board = chess.Board()
+
 
 game = True
 print(board)
-print(Evaluate())
+#print(evaluate())
 
 #board.turn true for white, false for black
 
@@ -98,32 +78,28 @@ while game:
         player_move = chess.Move.from_uci(player_input)
         board.push(player_move)
 
-    best_score = MinMax(3)
+    best_set = negamax(3, 1)
+    best_score = -best_set[0]
     print(best_score)
-    best_moves = [move for move in all_moves if move[1] == best_score and move[0] in list(board.legal_moves)]
-    print(best_moves)
-    computer_move = best_moves[0][0]
+    #best_moves = [move for move in all_moves if move[1] == best_score and move[0] in list(board.legal_moves)]
+    #best_moves = [move for move in all_moves if move[1] == best_score and move[0] in list(board.legal_moves)]
+    #print(best_moves)
+    best_move = best_set[1]
+    computer_move = best_move
     #computer_move = best_moves[random.randint(0, len(best_moves)-1)][0]
     all_moves = []
+    best_move = None
 
     print(computer_move)
     board.push(computer_move)
 
     print("-----------------")
     print(board)
-    print(Evaluate())
+    print(evaluate("WHITE"))
 
     player_input = input()
     player_move = chess.Move.from_uci(player_input)
     board.push(player_move)
     print("-----------------")
     print(board)
-    print(Evaluate())
-
-
-
-
-
-
-
-
+    #print(evaluate())
