@@ -3,7 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="f88ae756-de8d-4c21-a53f-fe58ef85526f" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Chess-Engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/Chess-Engine.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Chess-Engine.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Version2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Version2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/negamx.py" beforeDir="false" afterPath="$PROJECT_DIR$/negamx.py" afterDir="false" />
     </list>
@@ -35,7 +35,12 @@
     <property name="restartRequiresConfirmation" value="false" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
-  <component name="RunManager" selected="Python.Chess-Engine">
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Anthony Ouch\PycharmProjects\Chess-Engine" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.main">
     <configuration name="Chess-Engine" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Chess-Engine" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -57,7 +62,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Version 3" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="ChessEngine" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Chess-Engine" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -69,7 +74,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Version 3.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ChessEngine.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -78,7 +83,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Version2" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="Lichess" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Chess-Engine" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -90,7 +95,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Version2.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Lichess.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -99,7 +104,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="extra" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="Main" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Chess-Engine" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -111,7 +116,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/extra.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -120,7 +125,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="negamx" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Chess-Engine" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -132,7 +137,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/negamx.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -143,11 +148,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.main" />
+        <item itemvalue="Python.ChessEngine" />
+        <item itemvalue="Python.Lichess" />
+        <item itemvalue="Python.Main" />
         <item itemvalue="Python.Chess-Engine" />
-        <item itemvalue="Python.Version 3" />
-        <item itemvalue="Python.Version2" />
-        <item itemvalue="Python.negamx" />
-        <item itemvalue="Python.extra" />
       </list>
     </recent_temporary>
   </component>
@@ -185,42 +190,46 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="92" y="92" width="1736" height="856" key="DiffContextDialog/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623504781611" />
-    <state width="1899" height="280" key="GridCell.Tab.0.bottom" timestamp="1623676521157">
+    <state x="740" y="274" key="FileChooserDialogImpl" timestamp="1623758142762">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="740" y="274" key="FileChooserDialogImpl/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623758142762" />
+    <state width="1899" height="280" key="GridCell.Tab.0.bottom" timestamp="1623787174611">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1899" height="282" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-189.1920.1040@-1920.-189.1920.1040" timestamp="1623575251262" />
-    <state width="1899" height="280" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623676521157" />
-    <state width="1899" height="280" key="GridCell.Tab.0.center" timestamp="1623676521157">
+    <state width="1899" height="280" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623787174611" />
+    <state width="1899" height="280" key="GridCell.Tab.0.center" timestamp="1623787174611">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1899" height="282" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-189.1920.1040@-1920.-189.1920.1040" timestamp="1623575251261" />
-    <state width="1899" height="280" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623676521157" />
-    <state width="1899" height="280" key="GridCell.Tab.0.left" timestamp="1623676521157">
+    <state width="1899" height="280" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623787174611" />
+    <state width="1899" height="280" key="GridCell.Tab.0.left" timestamp="1623787174611">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1899" height="282" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-189.1920.1040@-1920.-189.1920.1040" timestamp="1623575251261" />
-    <state width="1899" height="280" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623676521157" />
-    <state width="1899" height="280" key="GridCell.Tab.0.right" timestamp="1623676521157">
+    <state width="1899" height="280" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623787174611" />
+    <state width="1899" height="280" key="GridCell.Tab.0.right" timestamp="1623787174611">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1899" height="282" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-189.1920.1040@-1920.-189.1920.1040" timestamp="1623575251262" />
-    <state width="1899" height="280" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623676521157" />
-    <state width="1899" height="348" key="GridCell.Tab.1.bottom" timestamp="1623603024381">
+    <state width="1899" height="280" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623787174611" />
+    <state width="1899" height="348" key="GridCell.Tab.1.bottom" timestamp="1623767195307">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1899" height="348" key="GridCell.Tab.1.bottom/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623603024381" />
-    <state width="1899" height="348" key="GridCell.Tab.1.center" timestamp="1623603024381">
+    <state width="1899" height="348" key="GridCell.Tab.1.bottom/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623767195307" />
+    <state width="1899" height="348" key="GridCell.Tab.1.center" timestamp="1623767195307">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1899" height="348" key="GridCell.Tab.1.center/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623603024381" />
-    <state width="1899" height="348" key="GridCell.Tab.1.left" timestamp="1623603024381">
+    <state width="1899" height="348" key="GridCell.Tab.1.center/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623767195307" />
+    <state width="1899" height="348" key="GridCell.Tab.1.left" timestamp="1623767195307">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1899" height="348" key="GridCell.Tab.1.left/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623603024381" />
-    <state width="1899" height="348" key="GridCell.Tab.1.right" timestamp="1623603024381">
+    <state width="1899" height="348" key="GridCell.Tab.1.left/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623767195307" />
+    <state width="1899" height="348" key="GridCell.Tab.1.right" timestamp="1623767195307">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1899" height="348" key="GridCell.Tab.1.right/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623603024381" />
+    <state width="1899" height="348" key="GridCell.Tab.1.right/0.0.1920.1040/-1920.-189.1920.1040@0.0.1920.1040" timestamp="1623767195307" />
     <state x="461" y="162" key="SettingsEditor" timestamp="1623487576040">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
