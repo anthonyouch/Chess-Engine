@@ -2,6 +2,8 @@ import chess
 import random
 from time import time
 
+
+
 pawns = {
     0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0,
     8: 5, 9: 10, 10: 10, 11: -20, 12: -20, 13: 10, 14: 10, 15: 5,
@@ -97,9 +99,8 @@ column = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
 WHITE = 'WHITE'
 BLACK = 'BLACK'
 
-FEN = "r1b1r1k1/1pB2ppp/p1p1p3/4N3/3Pn3/8/PPP2PPP/R3K2R w KQ - 1 15"
+FEN = "6k1/8/p1R5/r1p5/8/8/6PK/8 w - - 0 1"
 board = chess.Board()
-PV_MOVE = None
 capture_order = {
     'pq': 0,
     'nq': 1,
@@ -133,10 +134,35 @@ capture_order = {
     'kp': 19,
 }
 
-def set_PV_MOVE(move):
+
+
+def reset_PV_MOVE(moves):
     global PV_MOVE
-    PV_MOVE = move
+    PV_MOVE.clear()
+    for index, move in enumerate(moves):
+        PV_MOVE[move] = index
     return
+
+def set_PV_MOVE(pv_move):
+    global PV_MOVE
+    PV_MOVE = pv_move
+    return
+
+def set_count():
+    global count
+    count = 0
+    return
+
+
+def setkiller_moves():
+    global killer_moves
+    killer_moves = [[0,0] for i in range(10)]
+
+def clear_history_moves():
+    global history_heuristic
+    history_heuristic.clear()
+
+
 
 
 def convert_to_string(move):
@@ -157,20 +183,23 @@ def capture_pruning(capture_moves):
     reorder_moves = sorted(capture_moves, key=lambda move: capture_order[convert_to_string(move)], reverse=False)
     return reorder_moves
 
-def check_if_capture(move):
-    if str(move) == PV_MOVE:
-        return -10
+def check_if_capture(move, depth):
+    if str(move) in PV_MOVE:
+        return -20 + PV_MOVE[str(move)]
     if board.is_capture(move):
         return capture_order[convert_to_string(move)]
-    if move in killer_moves:
-        return 20
+
+    if move in killer_moves[depth-1] or move in killer_moves[depth-3] or move in killer_moves[depth-5]:
+        return 40
+
     #if move in history_heuristic:
         #return 21 + history_heuristic[move]
-    return 50
+    return 100
 
 count = 0
 
 def return_count():
+    global count
     return count
 
 
@@ -219,7 +248,7 @@ def evaluate():
 
     white_king = board.king(chess.WHITE)
     black_king = board.king(chess.BLACK)
-    if queen_count == 0:
+    if (white_score_piece + black_score_piece - 40000) <= 2680:
         # it is endgame
         white_score_position += endking[white_king]
         black_score_position += endking[63-black_king]
@@ -239,7 +268,7 @@ def evaluate():
 def quies(alpha, beta):
 
     if board.is_checkmate():
-        return -100000
+        return -99990
     if board.is_stalemate():
         return 0
 
@@ -267,16 +296,34 @@ def quies(alpha, beta):
 
     return alpha
 
-killer_moves = set()
+killer_moves = [[0,0] for i in range(10)]
+killer_moves_set = set()
+
+print(killer_moves)
 
 history_heuristic = dict()
 
+PV_MOVE = dict()
 
-def setkiller_moves():
+
+def insertkiller(m, depth):
     global killer_moves
-    killer_moves = set()
+    global killer_moves_set
 
-def negamax(depth,  alpha, beta, pline):
+    if depth == 1:
+        return
+    if m == killer_moves[depth-1][1]:
+        return
+    if m in killer_moves_set:
+        return
+    if killer_moves[depth-1][0] in killer_moves_set:
+        killer_moves_set.remove(killer_moves[depth-1][0])
+    killer_moves_set.add(m)
+    killer_moves[depth-1][0] = killer_moves[depth-1][1]
+    killer_moves[depth-1][1] = m
+
+
+def negamax(depth,  alpha, beta, pline, mate, doNull):
     line = []
     #best_move = None
     fFoundPv = False
@@ -285,37 +332,51 @@ def negamax(depth,  alpha, beta, pline):
         return quies(alpha, beta), None
     best_move = None
     moves = list(board.legal_moves)
-
     #moves = sorted(moves, key=lambda move: 1 if board.is_capture(move) else 0, reverse=True)
-    moves = sorted(moves, key=lambda move:check_if_capture(move), reverse=False)
+    moves = sorted(moves, key=lambda move:check_if_capture(move, depth), reverse=False)
     all_moves_considered = []
     if board.is_checkmate():
-        return -100000, None
+        return -mate, None
     if board.is_stalemate():
         return 0, None
+    if board.is_repetition():
+        return 0, None
+
+
+    #null move stuff
+    if depth >= 3 and doNull and not board.is_check():
+        null_move = chess.Move.null()
+        executed_move = chess.Move.from_uci(str(null_move))
+        board.push(executed_move)
+        val = -negamax(depth-3, -beta, -beta+1, pline, mate, False)[0]
+        board.pop()
+        if val >= beta:
+            return beta, None
 
     for move in moves:
         # play the move
         executed_move = chess.Move.from_uci(str(move))
         board.push(executed_move)
         if fFoundPv:
-            val = -negamax(depth - 1, -alpha -1, -alpha, line)[0]
+            val = -negamax(depth - 1, -alpha -1, -alpha, line, mate-1, True)[0]
             if (val > alpha) and (val < beta):
-                val = -negamax(depth-1, -beta, -alpha, line)[0]
+                val = -negamax(depth-1, -beta, -alpha, line, mate-1, True)[0]
         else:
-            val = -negamax(depth-1, -beta, -alpha, line)[0]
+            val = -negamax(depth-1, -beta, -alpha, line, mate-1, True)[0]
         board.pop()
         if val >= beta:
             if not board.is_capture(move):
-                killer_moves.add(move)
-
+                insertkiller(move, depth)
             return beta, None
+
         if val > alpha:
             best_move = move
             alpha = val
             fFoundPv = True
             pline[:] = [str(move)] + line
             history_heuristic[move] = depth
+
+
     return alpha, best_move, pline
 
 

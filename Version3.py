@@ -39,8 +39,8 @@ simple_heuristics = {
 WHITE = 'WHITE'
 BLACK = 'BLACK'
 
-FEN = "4kb1r/p1pp1ppp/P3pq2/8/Qr1P4/8/4PPPP/RNB1KBNR w KQk - 1 13"
-board = chess.Board(FEN)
+FEN = "2Q4r/p2pkppp/P2bpq2/8/3r4/8/4PPPP/RNB1KBNR w KQ - 3 16"
+board = chess.Board()
 
 def capture_pruning(capture_moves):
     pass
@@ -58,13 +58,13 @@ def evaluate():
         if piece_symbol is not None:
             if piece_symbol.isupper():
                 white_score += simple_heuristics[piece_symbol.lower()]
-                #if piece_symbol.lower() == "p":
-                    #white_score += pawns[square]
+                if piece_symbol.lower() == "p":
+                    white_score += pawns[square]
                 # it is a white piece
             else:
                 black_score += simple_heuristics[piece_symbol]
-                #if piece_symbol == "p":
-                    #black_score += pawns[63-square]
+                if piece_symbol == "p":
+                    black_score += pawns[63-square]
 
                 # it's a black piece
     score = white_score - black_score
@@ -101,11 +101,9 @@ def quies(alpha, beta):
 def negamax(depth, maximum_depth, alpha, beta):
     #best_move = None
     if depth <= 0:
-        return evaluate()
         return quies(alpha, beta)
     best = -1000000
     all_moves = []
-    all_moves_considered = []
     moves = list(board.legal_moves)
 
     if len(moves) == 0:
@@ -126,7 +124,6 @@ def negamax(depth, maximum_depth, alpha, beta):
             return beta
         if val > alpha:
             all_moves = []
-            all_moves_considered
             alpha = val
             all_moves.append((move, val))
 

@@ -24,7 +24,6 @@ knights = {
     56: -50, 57: -40, 58: -30, 59: -30, 60: -30, 61: -30, 62: -40, 63: -50
 }
 
-
 bishops = {
     0: -20, 1: -10, 2: -10, 3: -10, 4: -10, 5: -10, 6: -10, 7: -20,
     8: -10, 9: 5, 10: 0, 11: 0, 12: 0, 13: 0, 14: 5, 15: -10,
@@ -79,8 +78,6 @@ endking = {
     56: -50, 57: -40, 58: -30, 59: -20, 60: -20, 61: -30, 62: -40, 63: -50
 }
 
-
-
 simple_heuristics = {
     'r':500,
     'p':100,
@@ -97,7 +94,7 @@ column = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
 WHITE = 'WHITE'
 BLACK = 'BLACK'
 
-FEN = "r4b1r/pp6/2pkpp1p/5q2/3P4/2Q2B2/PP3PPP/2R1K2R w K - 2 22"
+FEN = "b2q4/2k2p2/8/3r1R2/6K1/5Q2/8/8 w - - 0 1"
 board = chess.Board(FEN)
 
 capture_order = {
@@ -151,17 +148,12 @@ def capture_pruning(capture_moves):
     reorder_moves = sorted(capture_moves, key=lambda move: capture_order[convert_to_string(move)], reverse=False)
     return reorder_moves
 
-def check_if_capture(move):
-    if board.is_capture(move):
-        return capture_order[convert_to_string(move)]
-    return 20
-
 
 count = 0
 
+
 def evaluate():
     global count
-
     count += 1
     white_score_piece = 0
     black_score_piece = 0
@@ -193,7 +185,6 @@ def evaluate():
                 black_score_piece += simple_heuristics[piece_symbol]
                 if piece_symbol == "p":
                     black_score_position += pawns[63-square]
-
                 if piece_symbol == "r":
                     black_score_position += rooks[63-square]
                 if piece_symbol == "q":
@@ -204,92 +195,93 @@ def evaluate():
                 if piece_symbol == "n":
                     black_score_position += knights[63-square]
 
-
     white_king = board.king(chess.WHITE)
     black_king = board.king(chess.BLACK)
     if queen_count == 0:
         # it is endgame
         white_score_position += endking[white_king]
-        black_score_position += endking[63-black_king]
+        black_score_position += endking[black_king]
     else:
         white_score_position += middleking[white_king]
-        black_score_position += middleking[63-black_king]
+        black_score_position += middleking[black_king]
 
     white_score = white_score_piece + white_score_position
     black_score = black_score_piece + black_score_position
+                # it's a black piece
     score = white_score - black_score
+
     if board.turn:
         return score
     else:
         return -score
 
 def quies(alpha, beta):
-
     if board.is_checkmate():
         return -100000
-    if board.is_stalemate():
-        return 0
-
-    val = evaluate()
-    if val >= beta:
-        return beta
-    if val > alpha:
-        alpha = val
-
+    best = evaluate()
+    alpha = max(alpha, best)
+    if alpha >= beta:
+        return best
     # re order captures to be better
     capture_moves =[move for move in list(board.legal_moves) if board.is_capture(move)]
     reordered_capture_moves = capture_pruning(capture_moves)
-
     for move in reordered_capture_moves:
         # play the move
         executed_move = chess.Move.from_uci(str(move))
         board.push(executed_move)
         val = -quies(-beta, -alpha)
+        if str(move) == 'h5g4':
+            print('move of h5g4 is = ' + str(val))
         board.pop()
-        if val >= beta:
-            return beta
-        if val > alpha:
-            alpha = val
+        best = max(best, val)
+        alpha = max(alpha, val)
+        if alpha >= beta:
+            break
 
-    return alpha
-
+    return best
 
 def negamax(depth, maximum_depth, alpha, beta):
     #best_move = None
-    if depth <= 0:  
+    if depth <= 0:
         return quies(alpha, beta)
     all_moves = []
     moves = list(board.legal_moves)
-
-    moves = sorted(moves, key=lambda move:check_if_capture(move), reverse=False)
-
     all_moves_considered = []
-    if board.is_checkmate():
-        return -100000
-    if board.is_stalemate():
-        return 0
-
+    best = float('-inf')
+    best_move = None
+    if len(moves) == 0:
+        if (board.turn and board.is_check()):
+            if not player_is_white:
+                return 100000
+            return -100000
+        elif (not board.turn and board.is_check()):
+            if not player_is_white:
+                return -100000
+            return 100000
+        else:
+            return 0
     for move in moves:
         # play the move
         executed_move = chess.Move.from_uci(str(move))
         board.push(executed_move)
         val = -negamax(depth-1, maximum_depth, -beta, -alpha)
+        if val >= best:
+            best = val
+            all_moves_considered.append((move, val))
+            best_move = [(move, val)]
         board.pop()
-        if val >= beta:
-            return beta
-        if val > alpha:
-            all_moves = [(move, val)]
-            alpha = val
+        alpha = max(alpha, val)
+        if alpha >= beta:
+            break
 
     if depth == maximum_depth:
-        #return all_moves_considered
-        return all_moves
-    return alpha
+        return all_moves_considered
+        return best_move
+
+    return best
 
 game = True
 print(board)
-evaluate()
-
 
 player_is_white = False
 check_once = True
@@ -303,8 +295,9 @@ while game:
         board.push(player_move)
 
     start = time()
-    best_set = negamax(4, 4, -1000000, 1000000)
+    best_set = negamax(3, 3, -1000000, 1000000)
     print(count)
+
     print(time() - start)
 
     print(best_set)
