@@ -1,6 +1,7 @@
 from ChessEngine import *
 from Lichess import *
 import chess
+
 game = True
 print(board)
 evaluate()
@@ -11,43 +12,50 @@ check_once = True
 
 
 while game:
-
     # every two moves set pv_moves to none
-
     if player_is_white and check_once:
         check_once = False
         player_input = input()
         player_move = chess.Move.from_uci(player_input)
         board.push(player_move)
 
-
     #engine move
     total_time = 0
-    start = time()
-    #best_set = negamax(7, -1000000, 1000000, [], 100000, True)
-    for depth in range(1,100):
+    startstart = time()
+    alpha = -1000000
+    beta = 1000000
+    depth = 1
+    while True:
         start = time()
-        best_set = negamax(depth, -1000000, 1000000, [], 100000, True)
-        reset_PV_MOVE(best_set[2][1:])
-        setkiller_moves()
+        best_set = negamax(depth, alpha, beta, [], 100000, True)
+        if len(best_set) > 2:
+            reset_PV_MOVE(best_set[2][1:])
         total_time += (time() - start)
-        if depth == 6:
+        if (depth == 9 and len(best_set) > 2):
             print(depth, total_time)
             break
+        val = best_set[0]
+        if val <= alpha or val >= beta:
+            alpha = -1000000
+            beta = 1000000
+            continue
+        alpha = val - 50
+        beta = val + 50
+        depth += 1
 
+    print("hi" + str(return_eval_time()))
     print(return_count())
     list_of_positions.append(return_count())
     print(sum(list_of_positions))
     set_count()
-    print(time() - start)
+    print(time() - startstart)
 
-
-    reset_PV_MOVE(best_set[2][1:])
     print(PV_MOVE)
 
     print(best_set)
     print(killer_moves)
     setkiller_moves()
+
     best_move = best_set[1]
     print(best_move)
     board.push(best_move)
@@ -73,14 +81,12 @@ def check_player_move():
 
 def do_computer_move():
     start = time()
-    best_set = negamax(5,  -1000000, 1000000, [], 100000, True)
+    best_set = negamax(7,  -1000000, 1000000, [], 100000, True)
     print(time() - start)
     print(best_set)
     print("-----------------")
 
     return best_set
-
-
 
 def should_accept(event):
     return True
@@ -132,50 +138,113 @@ for event in client.bots.stream_incoming_events():
                 print(board)
 
                 # engine move
-                best_set = do_computer_move()
-
-                reset_PV_MOVE(best_set[2][1:])
-                print(PV_MOVE)
-
-                print(killer_moves)
-                setkiller_moves()
-                best_move = best_set[1]
-                print(best_move)
+                total_time = 0
+                start = time()
+                # best_set = negamax(7, -1000000, 1000000, [], 100000, True)
+                alpha = -1000000
+                beta = 1000000
+                depth = 1
+                while True:
+                    start = time()
+                    best_set = negamax(depth, alpha, beta, [], 100000, True)
+                    if len(best_set) > 2:
+                        reset_PV_MOVE(best_set[2][1:])
+                    #setkiller_moves()
+                    total_time += (time() - start)
+                    if total_time >= 5 and best_set[1] is not None:
+                        print(depth, total_time)
+                        break
+                    val = best_set[0]
+                    if val <= alpha or val >= beta:
+                        alpha = -1000000
+                        beta = 1000000
+                        continue
+                    alpha = val - 50
+                    beta = val + 50
+                    depth += 1
 
                 print(return_count())
                 list_of_positions.append(return_count())
-                print(list_of_positions)
                 print(sum(list_of_positions))
                 set_count()
 
-                board.push(best_move)
-                print(board)
-                game.play_move(best_move)
+                print(time() - start)
 
+                #reset_PV_MOVE(best_set[2][1:])
+                print(PV_MOVE)
+
+                print(best_set)
+                print(killer_moves)
+                setkiller_moves()
+
+                best_move = best_set[1]
+
+                print(best_move)
+                try:
+                    board.push(best_move)
+                    print(board)
+                    game.play_move(best_move)
+                except:
+                    "ERROR OCCURED"
+                    break
         else:
             while True:
 
+                print(board)
                 # engine move
-                best_set = do_computer_move()
+                total_time = 0
+                start = time()
+                # best_set = negamax(7, -1000000, 1000000, [], 100000, True)
+                alpha = -1000000
+                beta = 1000000
+                depth = 1
+                print(board)
+                print(board.turn)
+                while True:
+                    start = time()
+                    best_set = negamax(depth, alpha, beta, [], 100000, True)
 
-                reset_PV_MOVE(best_set[2][1:])
+                    if len(best_set) > 2:
+                        reset_PV_MOVE(best_set[2][1:])
+                    #setkiller_moves()
+                    total_time += (time() - start)
+                    if total_time >= 5 and best_set[1] is not None:
+                        print(depth, total_time)
+                        break
+                    val = best_set[0]
+                    if val <= alpha or val >= beta:
+                        alpha = -1000000
+                        beta = 1000000
+                        continue
+                    alpha = val - 50
+                    beta = val + 50
+                    depth += 1
+
+                print(return_count())
+                list_of_positions.append(return_count())
+                print(sum(list_of_positions))
+                set_count()
+
+                #reset_PV_MOVE(best_set[2][1:])
                 print(PV_MOVE)
 
+                print(best_set)
                 print(killer_moves)
                 setkiller_moves()
 
                 best_move = best_set[1]
                 print(best_move)
-                print(return_count())
-                list_of_positions.append(return_count())
-                print(list_of_positions)
-                print(sum(list_of_positions))
-                set_count()
 
-                board.push(best_move)
-                print(board)
 
-                game.play_move(best_move)
+                try:
+                    board.push(best_move)
+                    print(board)
+                    game.play_move(best_move)
+                except:
+                    print("ERROR OCCURED")
+                    break
+
+
 
                 # player move
                 move = game.get_latest_move(board.turn)

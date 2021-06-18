@@ -13,9 +13,9 @@ class Lichess:
 
     def player_color(self):
         print(self.ongoing)
-        if self.ongoing['players']['white']['user']['name'] != 'AntonEngine-Bot':
-            return True
-        return False
+        if self.ongoing['players']['black']['user']['name'] == 'AntonEngine-Bot':
+            return False
+        return True
 
     def get_move_list(self):
         print(self.ongoing)
