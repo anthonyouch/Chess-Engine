@@ -1,6 +1,6 @@
 import chess
 import random
-import json
+from TranspositionTable import *
 from time import time
 import chess.polyglot
 
@@ -360,6 +360,9 @@ class Engine(Player):
         if self.board.is_repetition():
             return 0, None
 
+        
+
+
         # null move stuff
         if depth >= 3 and doNull and not self.board.is_check():
             null_move = chess.Move.null()
@@ -431,11 +434,33 @@ class Engine(Player):
     def aspiration_window(self):
         total_time = 0
         alpha, beta, depth = -1000000, 1000000, 1
+
+        # if the last move played is the same as the first move in the pv_line
+        # then start at depth = 5
+        # last move played is board.pop()
+        last_move_played = self.board.pop()
+        if str(last_move_played) in self.PV_MOVE and self.PV_MOVE[str(last_move_played)] == 1:
+            print('move predicted was played')
+            depth = len(self.PV_MOVE)
+            self.PV_MOVE.pop(str(last_move_played))
+
+            # change values to match the depths
+            for key in self.PV_MOVE.keys():
+                self.PV_MOVE[key] -= 2
+        else:
+            self.PV_MOVE = dict()
+
+        self.board.push(last_move_played)
+
         while True:
+            self.tt, self.hits = LRUCache(1e8), 0
+
             start = time()
             best_set = self.negamax(depth, alpha, beta, [], 100000, True)
+
             if len(best_set) > 2:
-                self.reset_PV_MOVE(best_set[2][1:])
+                print("pv_move_used: " + str(self.PV_MOVE) + ",   depth: " + str(depth))
+                self.reset_PV_MOVE(best_set[2][:])
             total_time += (time() - start)
 
             if depth == 6 and best_set[1] is not None:
@@ -448,6 +473,9 @@ class Engine(Player):
             alpha = val - 50
             beta = val + 50
             depth += 1
+
+        print("pv_move_used: " + str(self.PV_MOVE))
+        self.PV_MOVE.pop(str(best_set[1]))
 
         return best_set, total_time, depth
 
@@ -467,9 +495,10 @@ class Engine(Player):
             result = self.aspiration_window()
             print('Result: ' + str(result))
             best_move_val, best_move, pv_move, total_time, depth = result[0][0], result[0][1], result[0][2], result[1], result[2]
-            print('Move: ' + self.board.san(best_move))
+            print('Engine Move: ' + self.board.san(best_move))
             print('Expected move value: ' + str(best_move_val))
             print('PV Move line: ' + str(pv_move))
+            print('PV Move stored in engine: ' + str(self.PV_MOVE))
             print('Depth reached: ' + str(depth))
             print('Time elapsed: ' + str(total_time) + 's')
             print('Positions evaluated: ' + str(self.count))
@@ -478,7 +507,6 @@ class Engine(Player):
             #is_middle_game = False
         if self.is_end_game:
             pass
-
 
         return best_move, self.PV_MOVE
 

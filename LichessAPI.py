@@ -61,6 +61,8 @@ class LichessAPI():
             return
 
     def update_board(self):
+        #reset the board
+        self.board = chess.Board()
         for move in self.move_list:
             move_played = chess.Move.from_uci(str(self.board.parse_san(move)))
             self.board.push(move_played)
