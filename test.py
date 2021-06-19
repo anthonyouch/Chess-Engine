@@ -1,3 +1,3 @@
 
 string = "1"
-print(string.isnumeric())
+print(False == False)

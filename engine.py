@@ -2,6 +2,7 @@ import chess
 import random
 import json
 from time import time
+import chess.polyglot
 
 class Player:
     """
@@ -26,39 +27,15 @@ class Player:
         """
         gets the move from generate_move method and then pushes it on the board
         """
-        move = self.generate_move()
+        move, pv_move = self.generate_move()
         self.board.push(move)
-
-
-class Human(Player):
-    """This class represents the human player in the game"""
-
-    def __init__(self, board, color):
-        super().__init__(board, color)
-
-    def generate_move(self):
-        """
-        gets the move that the player has played and returns the move object
-        """
-        try:
-            # Get a string representation of a move
-            move_uci = input("Enter a valid move: ")
-            move = chess.Move.from_uci(move_uci)
-        except ValueError:
-            print("Invalid Move, Enter a valid move: ")
-            move = self.generate_move()
-
-        if move not in self.board.legal_moves:
-            print('Not a valid move, Enter a valid move: ')
-            move = self.generate_move()
-
-        return move
+        return move, pv_move
 
 
 class Engine(Player):
     """This class represents the engine player in the game"""
 
-    def __init__(self, board, color):
+    def __init__(self, board, color, PV_MOVE):
         super().__init__(board, color)
 
         # stage of the game
@@ -68,10 +45,11 @@ class Engine(Player):
         self.is_opening = True
         self.is_middle_game = False
         self.is_end_game = False
-
+        self.count = 0
 
         # PV_MOVE contains what the engine thinks is the best line with the value as the depth
-        self.PV_MOVE = dict()
+        self.PV_MOVE = PV_MOVE
+        print('PV_MOVE of the Engine: ' + str(PV_MOVE))
 
         # killer moves are the quiet moves that are good
         self.killer_moves = [[0, 0] for i in range(15)]
@@ -86,10 +64,6 @@ class Engine(Player):
             chess.QUEEN: 900,
             chess.KING: 20000
         }
-
-        # openings are stored as a list of dictionaries
-        with open('json/openings.json', 'r') as openings_file:
-            self.openings = json.load(openings_file)
 
 
         # to help me find the location of the pieces
@@ -212,6 +186,7 @@ class Engine(Player):
 
 
     def evaluate_board(self):
+        self.count += 1
         """ evaluate the position and return an estimate of what the position evaluation is"""
         # list of how many of the location of how many pawns/knights/bishops/etc there are for white
         wp = self.board.pieces(chess.PAWN, chess.WHITE)
@@ -301,33 +276,22 @@ class Engine(Player):
             board.push(move)
         return move_history
 
-    def is_possible_opening(self, opening, move_history):
-        try:
-            opening_move_history = opening['m'][:len(move_history)]
-        except:
-            return False
-        return opening_move_history == move_history and len(opening['m']) > len(move_history)
+
 
     def generate_opening_move(self):
-        move_history = self.get_move_history()
-        move_history = [str(move) for move in move_history]
-
-        possible_openings = []
-        for opening in self.openings:
-            if self.is_possible_opening(opening, move_history):
-                possible_openings.append(opening)
-
-        if not possible_openings:
+        try:
+            with chess.polyglot.open_reader("data/polyglot/performance.bin") as reader:
+                opening_moves = []
+                for entry in reader.find_all(self.board):
+                    opening_moves.append((entry.move, entry.weight, entry.learn))
+                random.shuffle(opening_moves)
+                return opening_moves[0][1], opening_moves[0][0]
+        except:
             return False
-        else:
-            random.shuffle(possible_openings)
-            fewest_moves = min([len(opening['m']) for opening in possible_openings])
-            closest_possible_openings = []
-            for possible_opening in possible_openings:
-                if len(possible_opening['m']) == fewest_moves:
-                    closest_possible_openings.append(possible_opening)
-            chosen_opening = random.choice(closest_possible_openings)
-            return chosen_opening, chosen_opening['m'][len(move_history)]
+
+
+
+
 
     def convert_to_string(self, move):
         """
@@ -474,7 +438,7 @@ class Engine(Player):
                 self.reset_PV_MOVE(best_set[2][1:])
             total_time += (time() - start)
 
-            if depth == 5 and best_set[0] is not None:
+            if depth == 6 and best_set[1] is not None:
                 break
             val = best_set[0]
             if val <= alpha or val >= beta:
@@ -493,31 +457,28 @@ class Engine(Player):
         if self.is_opening:
             opening_move = self.generate_opening_move()
             if opening_move:
-                opening, move_string = opening_move
-                from_square = move_string[:2]
-
-                from_square_num = chess.SQUARE_NAMES.index(from_square)
-                to_square = move_string[2:]
-                to_square_num = chess.SQUARE_NAMES.index(to_square)
-                best_move = chess.Move(from_square_num, to_square_num)
-                print(opening['n'])
+                opening, best_move = opening_move
+                print('Weight: ' + str(opening))
                 print('Move: ' + self.board.san(best_move))
             else:
                 self.is_opening = False
                 self.is_middle_game = True
         if self.is_middle_game:
             result = self.aspiration_window()
+            print('Result: ' + str(result))
             best_move_val, best_move, pv_move, total_time, depth = result[0][0], result[0][1], result[0][2], result[1], result[2]
             print('Move: ' + self.board.san(best_move))
             print('Expected move value: ' + str(best_move_val))
             print('PV Move line: ' + str(pv_move))
             print('Depth reached: ' + str(depth))
             print('Time elapsed: ' + str(total_time) + 's')
+            print('Positions evaluated: ' + str(self.count))
             # if total pieces is less than 5
             #is_end_game = True
             #is_middle_game = False
         if self.is_end_game:
             pass
 
-        return best_move
+
+        return best_move, self.PV_MOVE
 

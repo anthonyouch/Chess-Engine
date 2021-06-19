@@ -31,7 +31,7 @@ while game:
         if len(best_set) > 2:
             reset_PV_MOVE(best_set[2][1:])
         total_time += (time() - start)
-        if (depth == 9 and len(best_set) > 2):
+        if (depth == 6 and len(best_set) > 2):
             print(depth, total_time)
             break
         val = best_set[0]
