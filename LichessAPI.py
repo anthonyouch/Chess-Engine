@@ -58,7 +58,24 @@ class LichessAPI():
         for stream in self.stream:
             self.move_list = stream['state']['moves'].split()
             self.update_board()
-            return
+
+            # determine whether i should play faster
+            should_play_faster = False
+            white_remaining_time = stream['state']['wtime']
+            black_remaining_time = stream['state']['btime']
+            print("white_remaining_time: " + str(white_remaining_time))
+            print("black_remaining_time: " + str(black_remaining_time))
+            print("engine_color during getting move list: " + str(self.engine_color))
+            # if i'm under a minute of time and the opponent has more than 30 seconds than me
+            if self.engine_color == chess.WHITE:
+                if white_remaining_time <= 90000 and white_remaining_time <= black_remaining_time + 30000:
+                    should_play_faster = True
+            elif self.engine_color == chess.BLACK:
+                if black_remaining_time <= 90000 and black_remaining_time <= black_remaining_time + 30000:
+                    should_play_faster = True
+
+            print("should_player_faster: " + str(should_play_faster))
+            return should_play_faster
 
     def update_board(self):
         #reset the board
@@ -82,7 +99,10 @@ class LichessAPI():
                 return moves.split()[-1]
 
     def play_move(self, move):
-        self.client.bots.make_move(self.game_id, move)
+        try:
+            self.client.bots.make_move(self.game_id, move)
+        except:
+            print('ERROR OCCURED WHEN TRYING TO MAKE MOVE IN LICHESS')
 
     def run_api(self):
         while True:
@@ -94,18 +114,23 @@ class LichessAPI():
             elif self.event_type == 'gameStart':
                 self.get_move_list()
                 #if len(self.move_list) > 0:
-                self.get_updated_move_list()
+
+                self.get_player_color()
+
+                # updates the move list and returns whether or not i'm in time trouble and should play faster
+                print("GETTING UPDATED MOVE LIST NOW")
+                should_play_faster = self.get_updated_move_list()
 
                 self.get_whose_turn()
-                self.get_player_color()
+
                 #self.update_board()
                 if self.whose_turn == self.human_color:
                     print("Turn: Human")
                     # it is not my turn so lets wait for the opponent to play a move
-                    return self.get_latest_human_move(), self.board, self.engine_color, self.whose_turn
+                    return self.get_latest_human_move(), self.board, self.engine_color, self.whose_turn, should_play_faster
                 elif self.whose_turn == self.engine_color:
                     print("Turn: Engine")
                     # my turn to move, time to relay information to bot
-                    return False, self.board, self.engine_color, self.whose_turn
+                    return False, self.board, self.engine_color, self.whose_turn, should_play_faster
 
 

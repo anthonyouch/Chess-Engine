@@ -3,6 +3,7 @@ import random
 from TranspositionTable import *
 from time import time
 import chess.polyglot
+from Evaluate_functions import *
 
 class Player:
     """
@@ -27,15 +28,15 @@ class Player:
         """
         gets the move from generate_move method and then pushes it on the board
         """
-        move, pv_move = self.generate_move()
+        move, pv_move, table = self.generate_move()
         self.board.push(move)
-        return move, pv_move
+        return move, pv_move, table
 
 
 class Engine(Player):
     """This class represents the engine player in the game"""
 
-    def __init__(self, board, color, PV_MOVE):
+    def __init__(self, board, color, PV_MOVE, table, should_play_faster):
         super().__init__(board, color)
 
         # stage of the game
@@ -46,6 +47,9 @@ class Engine(Player):
         self.is_middle_game = False
         self.is_end_game = False
         self.count = 0
+        self.should_play_faster = should_play_faster
+
+        self.tt, self.hits = table, 0
 
         # PV_MOVE contains what the engine thinks is the best line with the value as the depth
         self.PV_MOVE = PV_MOVE
@@ -240,8 +244,26 @@ class Engine(Player):
         white_score_position = wpp + wnp + wbp + wrp + wqp + wkp
         black_score_position = bpp + bnp + bbp + brp + bqp + bkp
 
-        white_total_score = white_score_piece + white_score_position
-        black_total_score = black_score_piece + black_score_position
+        # if a pawn is isolated for each pawn -10
+        isolated_pawns_white = isolated_pawns(wp)
+        isolated_pawns_black = isolated_pawns(bp)
+
+
+        # calcualte passed pawns
+        passed_pawn_white_points, passed_pawn_black_points = passed_pawns(wp, bp)
+
+        # calculate semi opened and opened files for rooks
+        white_rook_points, black_rook_points = open_and_semiopen(wr, br, wp, bp, 10, 5)
+
+        # calculate the same for semi opened and opened files for queens
+
+        white_queen_points, black_queen_points = open_and_semiopen(wq, bq, wp, bp, 5, 3)
+
+
+        white_total_score = white_score_piece + white_score_position + isolated_pawns_white\
+                            + passed_pawn_white_points + white_rook_points + white_queen_points
+        black_total_score = black_score_piece + black_score_position + isolated_pawns_black\
+                            + passed_pawn_black_points + black_rook_points + black_queen_points
 
         total_score = white_total_score - black_total_score
 
@@ -280,7 +302,7 @@ class Engine(Player):
 
     def generate_opening_move(self):
         try:
-            with chess.polyglot.open_reader("data/polyglot/performance.bin") as reader:
+            with chess.polyglot.open_reader("data/polyglot/Elo2400.bin") as reader:
                 opening_moves = []
                 for entry in reader.find_all(self.board):
                     opening_moves.append((entry.move, entry.weight, entry.learn))
@@ -288,10 +310,6 @@ class Engine(Player):
                 return opening_moves[0][1], opening_moves[0][0]
         except:
             return False
-
-
-
-
 
     def convert_to_string(self, move):
         """
@@ -360,8 +378,16 @@ class Engine(Player):
         if self.board.is_repetition():
             return 0, None
 
-        
+        pos = chess.polyglot.zobrist_hash(self.board)
+        alpha_o = alpha
 
+        entry = self.tt.get(pos)
+
+        if entry is not None and entry.depth >= depth:
+            self.hits += 1
+            alpha, beta = entry.narrowing(alpha, beta)
+            if alpha >= beta or entry.isexact():
+                return entry.score, None
 
         # null move stuff
         if depth >= 3 and doNull and not self.board.is_check():
@@ -393,6 +419,8 @@ class Engine(Player):
                 alpha = val
                 fFoundPv = True
                 pline[:] = [str(move)] + line
+
+        self.tt[pos] = Entry(depth, alpha, best_move, (alpha >= beta) - (alpha <= alpha_o))
 
         return alpha, best_move, pline
 
@@ -438,7 +466,12 @@ class Engine(Player):
         # if the last move played is the same as the first move in the pv_line
         # then start at depth = 5
         # last move played is board.pop()
-        last_move_played = self.board.pop()
+        last_move_played = None
+        try:
+            last_move_played = self.board.pop()
+        except:
+            print("ERROR, Last move played doesn't exist")
+
         if str(last_move_played) in self.PV_MOVE and self.PV_MOVE[str(last_move_played)] == 1:
             print('move predicted was played')
             depth = len(self.PV_MOVE)
@@ -450,10 +483,10 @@ class Engine(Player):
         else:
             self.PV_MOVE = dict()
 
-        self.board.push(last_move_played)
+        if last_move_played is not None:
+            self.board.push(last_move_played)
 
         while True:
-            self.tt, self.hits = LRUCache(1e8), 0
 
             start = time()
             best_set = self.negamax(depth, alpha, beta, [], 100000, True)
@@ -463,7 +496,16 @@ class Engine(Player):
                 self.reset_PV_MOVE(best_set[2][:])
             total_time += (time() - start)
 
-            if depth == 6 and best_set[1] is not None:
+            # if we found a forced checkmate we should stop looking
+            if best_set[0] >= 99000:
+                break
+
+            # do another if statement for the len of the pv move
+            if self.should_play_faster and depth >= 4 and best_set[1] is not None and len(best_set[2][:] >= depth):
+                print('Should_player_faster has been activated ')
+                break
+
+            if total_time >= 7 and best_set[1] is not None and len(best_set[2][:]) >= depth:
                 break
             val = best_set[0]
             if val <= alpha or val >= beta:
@@ -475,10 +517,10 @@ class Engine(Player):
             depth += 1
 
         print("pv_move_used: " + str(self.PV_MOVE))
-        self.PV_MOVE.pop(str(best_set[1]))
+        if str(best_set[1]) in self.PV_MOVE:
+            self.PV_MOVE.pop(str(best_set[1]))
 
         return best_set, total_time, depth
-
 
     def generate_move(self):
         """Gets the move the computer thinks is the best move"""
@@ -508,5 +550,5 @@ class Engine(Player):
         if self.is_end_game:
             pass
 
-        return best_move, self.PV_MOVE
+        return best_move, self.PV_MOVE, self.tt
 
