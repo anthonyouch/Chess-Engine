@@ -28,9 +28,9 @@ class Player:
         """
         gets the move from generate_move method and then pushes it on the board
         """
-        move, pv_move, table = self.generate_move()
+        move, pv_move, table, positions = self.generate_move()
         self.board.push(move)
-        return move, pv_move, table
+        return move, pv_move, table, positions
 
 
 class Engine(Player):
@@ -56,7 +56,7 @@ class Engine(Player):
         print('PV_MOVE of the Engine: ' + str(PV_MOVE))
 
         # killer moves are the quiet moves that are good
-        self.killer_moves = [[0, 0] for i in range(15)]
+        self.killer_moves = [[0, 0] for i in range(30)]
         self.killer_moves_set = set()
 
         # the values of the raw pieces
@@ -329,7 +329,11 @@ class Engine(Player):
         string = str(start_piece).lower() + str(target_piece).lower()
         return string
 
-    def move_priority(self, move, depth):
+    def move_priority(self, move, depth, entry):
+
+        if entry is not None and entry.move == move:
+            return 110
+
         if str(move) in self.PV_MOVE:
             # the value of PV_MOVE[str(move)] is the depth and we should prioritise lower depth
             return 100 - self.PV_MOVE[str(move)]
@@ -363,25 +367,28 @@ class Engine(Player):
             self.PV_MOVE[move] = index
         return
 
-    def negamax(self, depth, alpha, beta, pline, mate, doNull):
+    def negamax(self, depth, alpha, beta, pline, mate, doNull, ponder=None):
         line = []
         fFoundPv = False
+
+        pos = chess.polyglot.zobrist_hash(self.board)
+        alpha_o = alpha
+
+        entry = self.tt.get(pos)
+
 
         if depth <= 0:
             return self.quies(alpha, beta), None
         best_move = None
-        moves = sorted(list(self.board.legal_moves), key=lambda move: self.move_priority(move, depth), reverse=True)
+
+        moves = sorted(list(self.board.legal_moves), key=lambda move: self.move_priority(move, depth, entry), reverse=True)
+
         if self.board.is_checkmate():
             return -mate, None
         if self.board.is_stalemate():
             return 0, None
         if self.board.is_repetition():
             return 0, None
-
-        pos = chess.polyglot.zobrist_hash(self.board)
-        alpha_o = alpha
-
-        entry = self.tt.get(pos)
 
         if entry is not None and entry.depth >= depth:
             self.hits += 1
@@ -393,21 +400,26 @@ class Engine(Player):
         if depth >= 3 and doNull and not self.board.is_check():
             null_move = chess.Move.null()
             self.board.push(null_move)
-            val = -self.negamax(depth - 3, -beta, -beta + 1, pline, mate, False)[0]
+            val = -self.negamax(depth - 3, -beta, -beta + 1, pline, mate, False, ponder)[0]
             self.board.pop()
             if val >= beta:
                 return beta, None
 
         for move in moves:
+
+            if ponder is not None and not ponder.should_ponder:
+                print("exiting negamax because pondering is false")
+                return 0, None
+
             # play the move
             executed_move = chess.Move.from_uci(str(move))
             self.board.push(executed_move)
             if fFoundPv:
-                val = -self.negamax(depth - 1, -alpha - 1, -alpha, line, mate - 1, True)[0]
+                val = -self.negamax(depth - 1, -alpha - 1, -alpha, line, mate - 1, True, ponder)[0]
                 if (val > alpha) and (val < beta):
-                    val = -self.negamax(depth - 1, -beta, -alpha, line, mate - 1, True)[0]
+                    val = -self.negamax(depth - 1, -beta, -alpha, line, mate - 1, True, ponder)[0]
             else:
-                val = -self.negamax(depth - 1, -beta, -alpha, line, mate - 1, True)[0]
+                val = -self.negamax(depth - 1, -beta, -alpha, line, mate - 1, True, ponder)[0]
             self.board.pop()
             if val >= beta:
                 if not self.board.is_capture(move):
@@ -421,6 +433,8 @@ class Engine(Player):
                 pline[:] = [str(move)] + line
 
         self.tt[pos] = Entry(depth, alpha, best_move, (alpha >= beta) - (alpha <= alpha_o))
+
+
 
         return alpha, best_move, pline
 
@@ -463,6 +477,8 @@ class Engine(Player):
         total_time = 0
         alpha, beta, depth = -1000000, 1000000, 1
 
+        play_move_instantly = False
+
         # if the last move played is the same as the first move in the pv_line
         # then start at depth = 5
         # last move played is board.pop()
@@ -472,8 +488,23 @@ class Engine(Player):
         except:
             print("ERROR, Last move played doesn't exist")
 
-        if str(last_move_played) in self.PV_MOVE and self.PV_MOVE[str(last_move_played)] == 1:
+
+        print('PV MOVE BEFORE TRYING TO FIND PV_MOVE: ' + str(self.PV_MOVE))
+        print('LAST_MOVE PLAYED: ' + str(last_move_played))
+
+        if str(last_move_played) in self.PV_MOVE:
+            print('trying to find pv_move: ' + str(self.PV_MOVE[str(last_move_played)]))
+            print(self.PV_MOVE)
+
+
+        # play instantly if the depth on the pv_line is greater than or equal to 5
+        if str(last_move_played) in self.PV_MOVE and self.PV_MOVE[str(last_move_played)] == 0 and len(self.PV_MOVE) >= 6:
             print('move predicted was played')
+            print('playing move in pv line instantly')
+            play_move_instantly = True
+            best_move = [move for move in self.PV_MOVE.keys() if self.PV_MOVE[move] == 1][0]
+
+
             depth = len(self.PV_MOVE)
             self.PV_MOVE.pop(str(last_move_played))
 
@@ -486,14 +517,15 @@ class Engine(Player):
         if last_move_played is not None:
             self.board.push(last_move_played)
 
-        while True:
+        while True and not play_move_instantly:
 
             start = time()
             best_set = self.negamax(depth, alpha, beta, [], 100000, True)
 
+
             if len(best_set) > 2:
-                print("pv_move_used: " + str(self.PV_MOVE) + ",   depth: " + str(depth))
                 self.reset_PV_MOVE(best_set[2][:])
+                print("pv_move_used: " + str(self.PV_MOVE) + ",   depth: " + str(depth))
             total_time += (time() - start)
 
             # if we found a forced checkmate we should stop looking
@@ -501,25 +533,34 @@ class Engine(Player):
                 break
 
             # do another if statement for the len of the pv move
-            if self.should_play_faster and depth >= 4 and best_set[1] is not None and len(best_set[2][:] >= depth):
+            if self.should_play_faster and depth >= 4 and best_set[1] is not None and len(best_set[2][:]) >= depth:
                 print('Should_player_faster has been activated ')
                 break
 
             if total_time >= 7 and best_set[1] is not None and len(best_set[2][:]) >= depth:
                 break
+
             val = best_set[0]
+
             if val <= alpha or val >= beta:
                 alpha = -1000000
                 beta = 1000000
                 continue
+
             alpha = val - 50
             beta = val + 50
             depth += 1
 
-        print("pv_move_used: " + str(self.PV_MOVE))
+
+        if play_move_instantly:
+            best_set = [44444, chess.Move.from_uci(best_move), self.PV_MOVE]
+
         if str(best_set[1]) in self.PV_MOVE:
             self.PV_MOVE.pop(str(best_set[1]))
 
+        print("pv_move at the end: " + str(self.PV_MOVE))
+
+        print("best_set: " + str(best_set))
         return best_set, total_time, depth
 
     def generate_move(self):
@@ -544,11 +585,12 @@ class Engine(Player):
             print('Depth reached: ' + str(depth))
             print('Time elapsed: ' + str(total_time) + 's')
             print('Positions evaluated: ' + str(self.count))
+            print('Transposition table hits: ' + str(self.hits))
             # if total pieces is less than 5
             #is_end_game = True
             #is_middle_game = False
         if self.is_end_game:
             pass
 
-        return best_move, self.PV_MOVE, self.tt
+        return best_move, self.PV_MOVE, self.tt, self.count
 

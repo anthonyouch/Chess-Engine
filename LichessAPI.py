@@ -1,5 +1,10 @@
 import berserk
 import chess
+from game import *
+from time import *
+from RepeatedTimer import *
+from threading import *
+
 class LichessAPI():
     def __init__(self):
         self.token = "vcQK07hJ0mWzw7ok"
@@ -18,6 +23,13 @@ class LichessAPI():
 
         self.engine_move = None
         self.board = chess.Board()
+
+        # if pondering is set to false stop pondering
+        self.should_ponder = True
+        self.pondering_pv_move = dict()
+        self.pondering_table = LRUCache(1e8)
+        self.latest_human_move = None
+
 
 
 
@@ -96,7 +108,65 @@ class LichessAPI():
         for stream in self.stream:
             if 'moves' in stream:
                 moves = stream['moves']
-                return moves.split()[-1]
+                self.should_ponder = False
+                print("should_ponder: " + str(self.should_ponder))
+                self.latest_human_move = moves.split()[-1]
+                return
+
+
+    def pondering(self, PV_MOVE, table):
+        """this function works on the pv line while waiting for the opponents move"""
+
+        # really bad code to try to make sure that every depth matches the move
+        pv_values = PV_MOVE.values()
+
+        if len(pv_values) >= 1 and (min(pv_values)) >= 1:
+            for key in PV_MOVE.keys():
+                PV_MOVE[key] -= 1
+
+        self.pondering_pv_move = PV_MOVE
+        self.pondering_table = table
+
+        print("PONDERING STARTED")
+
+        new_game = Game(self.board, self.engine_color, self.whose_turn, None, PV_MOVE, table, should_play_faster=False)
+
+        engine_player = new_game.engine_player
+
+        alpha, beta = -1000000, 1000000
+        depth = len(PV_MOVE) + 1
+        total_time = 0
+
+        for i in range(len(PV_MOVE) + 1, 12):
+            start = time()
+            best_set = engine_player.negamax(depth, alpha, beta, [], 100000, True, self)
+
+            if not self.should_ponder:
+                return
+
+            if len(best_set) > 2:
+                engine_player.reset_PV_MOVE(best_set[2][:])
+                print("pv_move_used: " + str(engine_player.PV_MOVE) + ",   depth: " + str(depth))
+            total_time += (time() - start)
+
+            val = best_set[0]
+
+            if val <= alpha or val >= beta:
+
+                alpha = -1000000
+                beta = 1000000
+                continue
+
+            alpha = val - 50
+            beta = val + 50
+            depth += 1
+
+            self.pondering_pv_move = engine_player.PV_MOVE
+            self.pondering_table = engine_player.tt
+
+            # if we found a forced checkmate we should stop looking
+            if val >= 99000:
+                return
 
     def play_move(self, move):
         try:
@@ -104,7 +174,7 @@ class LichessAPI():
         except:
             print('ERROR OCCURED WHEN TRYING TO MAKE MOVE IN LICHESS')
 
-    def run_api(self):
+    def run_api(self, PV_MOVE, table):
         while True:
 
             self.event_type = self.check_for_event()
@@ -127,10 +197,21 @@ class LichessAPI():
                 if self.whose_turn == self.human_color:
                     print("Turn: Human")
                     # it is not my turn so lets wait for the opponent to play a move
-                    return self.get_latest_human_move(), self.board, self.engine_color, self.whose_turn, should_play_faster
+
+                    # do threading to find the opponent move and while waiting for the opponent to make a move
+                    print('starting threading')
+
+                    rt = Thread(target=self.get_latest_human_move)
+                    rt.start()
+                    self.pondering(PV_MOVE, table)
+
+                    print("latest human move: " + str(self.latest_human_move))
+
+                    return self.latest_human_move, self.board, self.engine_color, self.whose_turn, should_play_faster, self.pondering_pv_move, self.pondering_table
+
                 elif self.whose_turn == self.engine_color:
                     print("Turn: Engine")
                     # my turn to move, time to relay information to bot
-                    return False, self.board, self.engine_color, self.whose_turn, should_play_faster
+                    return False, self.board, self.engine_color, self.whose_turn, should_play_faster, None, None
 
 

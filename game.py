@@ -4,7 +4,7 @@ import chess
 import time
 
 
-class Game():
+class Game:
     """ Game class to run the game and store data """
     def __init__(self, board, engine_color, whose_turn, player_move, PV_MOVE, table, should_play_faster):
         self.board = board
@@ -21,9 +21,9 @@ class Game():
 
         # turn is engine's turn
         if self.whose_turn == self.engine_color:
-            move, pv_move, table = self.engine_player.make_move()
+            move, pv_move, table, positions = self.engine_player.make_move()
             self.print_board()
-            return move, pv_move, table
+            return move, pv_move, table, positions
         else:
             # player made a move
             self.whose_turn = self.engine_color
@@ -42,21 +42,36 @@ if __name__ == '__main__':
 
     total_time = 0
     engine_time = 0
+    total_positions = 0
     while True:
         lichess = LichessAPI()
         # from the lichess api, get what the current board is
         # the color that the engine will be playing
         # and the move if the human just made a move else False
 
-        move, board, engine_color, whose_turn, should_play_faster = lichess.run_api()
+
+
+        move, board, engine_color, whose_turn, should_play_faster, pondering_pv_move, pondering_pv_table = lichess.run_api(PV_MOVE, table)
+
+        if pondering_pv_move is not None and pondering_pv_table is not None:
+            PV_MOVE = pondering_pv_move
+            table = pondering_pv_table
+
         print('whose turn: ' + str(whose_turn))
         print('engine_color: ' + str(engine_color))
         # this means we connected to the board and its our turn to move
         game = Game(board, engine_color, whose_turn, move, PV_MOVE, table, should_play_faster)
 
-        engine_move, pv_move, table = game.run_half_turn(move)
+        start = time.time()
+        engine_move, pv_move, table, positions = game.run_half_turn(move)
+        total_time += time.time() - start
+
         PV_MOVE = pv_move
         table = table
+        total_positions += positions
+
+        print("Total positions: " + str(total_positions))
+        print("Total time: " + str(total_time))
 
         # now relay the infomration back to the lichessapi about the move
         lichess.play_move(engine_move)
