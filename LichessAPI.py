@@ -137,7 +137,7 @@ class LichessAPI():
         depth = len(PV_MOVE) + 1
         total_time = 0
 
-        for i in range(len(PV_MOVE) + 1, 12):
+        for i in range(len(PV_MOVE) + 1, 40):
             start = time()
             best_set = engine_player.negamax(depth, alpha, beta, [], 100000, True, self)
 

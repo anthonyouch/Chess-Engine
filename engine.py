@@ -540,6 +540,10 @@ class Engine(Player):
             if total_time >= 7 and best_set[1] is not None and len(best_set[2][:]) >= depth:
                 break
 
+            # just in case we only have not completed pv_lines after a long time
+            if total_time >= 30 and best_set[1] is not None and len(best_set[2][:]) >= 2:
+                break
+
             val = best_set[0]
 
             if val <= alpha or val >= beta:
