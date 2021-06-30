@@ -5,6 +5,7 @@ from time import time
 import chess.polyglot
 from Evaluate_functions import *
 
+
 class Player:
     """
     This class represents a single player playing either white or black
@@ -28,9 +29,14 @@ class Player:
         """
         gets the move from generate_move method and then pushes it on the board
         """
-        move, pv_move, table, positions = self.generate_move()
-        self.board.push(move)
-        return move, pv_move, table, positions
+        move, pv_move, table, positions, best_move_val = self.generate_move()
+        try:
+            self.board.push(move)
+        except:
+            print(move)
+            print("ERROR IN MAKING MOVE TO BOARD")
+            move = None
+        return move, pv_move, table, positions, best_move_val
 
 
 class Engine(Player):
@@ -68,7 +74,6 @@ class Engine(Player):
             chess.QUEEN: 900,
             chess.KING: 20000
         }
-
 
         # to help me find the location of the pieces
         self.row = {'1': 0, '2': 8, '3': 16, '4': 24, '5': 32, '6': 40, '7': 48, '8': 56}
@@ -188,8 +193,13 @@ class Engine(Player):
             }
         }
 
-
     def evaluate_board(self):
+
+        if self.board.is_checkmate() and self.board.turn:
+            return 99900
+        elif self.board.is_checkmate() and not self.board.turn:
+            return -99900
+
         self.count += 1
         """ evaluate the position and return an estimate of what the position evaluation is"""
         # list of how many of the location of how many pawns/knights/bishops/etc there are for white
@@ -233,13 +243,13 @@ class Engine(Player):
 
         # this is the total black_score for positional values
         # do 63 - the square index to get the mirrored values for black
-        bpp = sum((self.PIECE_SQUARES[chess.PAWN][63-num] for num in bp))
-        bnp = sum((self.PIECE_SQUARES[chess.KNIGHT][63-num] for num in bn))
-        bbp = sum((self.PIECE_SQUARES[chess.BISHOP][63-num] for num in bb))
-        brp = sum((self.PIECE_SQUARES[chess.ROOK][63-num] for num in br))
-        bqp = sum((self.PIECE_SQUARES[chess.QUEEN][63-num] for num in bq))
-        bkp = sum((self.PIECE_SQUARES[chess.KING]['END'][63-num] for num in bk)) if end_game \
-            else sum((self.PIECE_SQUARES[chess.KING]['MIDDLE'][63-num] for num in bk))
+        bpp = sum((self.PIECE_SQUARES[chess.PAWN][63 - num] for num in bp))
+        bnp = sum((self.PIECE_SQUARES[chess.KNIGHT][63 - num] for num in bn))
+        bbp = sum((self.PIECE_SQUARES[chess.BISHOP][63 - num] for num in bb))
+        brp = sum((self.PIECE_SQUARES[chess.ROOK][63 - num] for num in br))
+        bqp = sum((self.PIECE_SQUARES[chess.QUEEN][63 - num] for num in bq))
+        bkp = sum((self.PIECE_SQUARES[chess.KING]['END'][63 - num] for num in bk)) if end_game \
+            else sum((self.PIECE_SQUARES[chess.KING]['MIDDLE'][63 - num] for num in bk))
 
         white_score_position = wpp + wnp + wbp + wrp + wqp + wkp
         black_score_position = bpp + bnp + bbp + brp + bqp + bkp
@@ -247,7 +257,6 @@ class Engine(Player):
         # if a pawn is isolated for each pawn -10
         isolated_pawns_white = isolated_pawns(wp)
         isolated_pawns_black = isolated_pawns(bp)
-
 
         # calcualte passed pawns
         passed_pawn_white_points, passed_pawn_black_points = passed_pawns(wp, bp)
@@ -259,10 +268,9 @@ class Engine(Player):
 
         white_queen_points, black_queen_points = open_and_semiopen(wq, bq, wp, bp, 5, 3)
 
-
-        white_total_score = white_score_piece + white_score_position + isolated_pawns_white\
+        white_total_score = white_score_piece + white_score_position + isolated_pawns_white \
                             + passed_pawn_white_points + white_rook_points + white_queen_points
-        black_total_score = black_score_piece + black_score_position + isolated_pawns_black\
+        black_total_score = black_score_piece + black_score_position + isolated_pawns_black \
                             + passed_pawn_black_points + black_rook_points + black_queen_points
 
         total_score = white_total_score - black_total_score
@@ -297,8 +305,6 @@ class Engine(Player):
         for move in move_history:
             board.push(move)
         return move_history
-
-
 
     def generate_opening_move(self):
         try:
@@ -368,6 +374,7 @@ class Engine(Player):
         return
 
     def negamax(self, depth, alpha, beta, pline, mate, doNull, ponder=None):
+
         line = []
         fFoundPv = False
 
@@ -376,25 +383,29 @@ class Engine(Player):
 
         entry = self.tt.get(pos)
 
-
-        if depth <= 0:
-            return self.quies(alpha, beta), None
         best_move = None
 
-        moves = sorted(list(self.board.legal_moves), key=lambda move: self.move_priority(move, depth, entry), reverse=True)
+        if ponder is not None and not ponder.should_ponder:
+            print("exiting negamax because pondering is false")
+            return 0, best_move, pline
+
+        if depth <= 0:
+            return self.quies(alpha, beta), best_move, pline
 
         if self.board.is_checkmate():
-            return -mate, None
+            return -99900, best_move, pline
+
         if self.board.is_stalemate():
-            return 0, None
+            return 0, best_move, pline
+
         if self.board.is_repetition():
-            return 0, None
+            return 0, best_move, pline
 
         if entry is not None and entry.depth >= depth:
             self.hits += 1
             alpha, beta = entry.narrowing(alpha, beta)
             if alpha >= beta or entry.isexact():
-                return entry.score, None
+                return entry.score, best_move, pline
 
         # null move stuff
         if depth >= 3 and doNull and not self.board.is_check():
@@ -403,13 +414,15 @@ class Engine(Player):
             val = -self.negamax(depth - 3, -beta, -beta + 1, pline, mate, False, ponder)[0]
             self.board.pop()
             if val >= beta:
-                return beta, None
+                return beta, best_move, pline
+
+        moves = sorted(list(self.board.legal_moves), key=lambda move: self.move_priority(move, depth, entry),
+                       reverse=True)
 
         for move in moves:
-
             if ponder is not None and not ponder.should_ponder:
                 print("exiting negamax because pondering is false")
-                return 0, None
+                return 0, best_move, pline
 
             # play the move
             executed_move = chess.Move.from_uci(str(move))
@@ -421,10 +434,12 @@ class Engine(Player):
             else:
                 val = -self.negamax(depth - 1, -beta, -alpha, line, mate - 1, True, ponder)[0]
             self.board.pop()
+
             if val >= beta:
                 if not self.board.is_capture(move):
                     self.insert_killer(move, depth)
-                return beta, None
+
+                return beta, best_move, pline
 
             if val > alpha:
                 best_move = move
@@ -434,14 +449,13 @@ class Engine(Player):
 
         self.tt[pos] = Entry(depth, alpha, best_move, (alpha >= beta) - (alpha <= alpha_o))
 
-
-
         return alpha, best_move, pline
 
     def quies(self, alpha, beta):
 
-        if self.board.is_checkmate():
-            return -99980
+        # if self.board.is_checkmate():
+        # return -99980
+
         if self.board.is_stalemate():
             return 0
 
@@ -488,7 +502,6 @@ class Engine(Player):
         except:
             print("ERROR, Last move played doesn't exist")
 
-
         print('PV MOVE BEFORE TRYING TO FIND PV_MOVE: ' + str(self.PV_MOVE))
         print('LAST_MOVE PLAYED: ' + str(last_move_played))
 
@@ -496,21 +509,26 @@ class Engine(Player):
             print('trying to find pv_move: ' + str(self.PV_MOVE[str(last_move_played)]))
             print(self.PV_MOVE)
 
-
         # play instantly if the depth on the pv_line is greater than or equal to 5
-        if str(last_move_played) in self.PV_MOVE and self.PV_MOVE[str(last_move_played)] == 0 and len(self.PV_MOVE) >= 6:
+        if str(last_move_played) in self.PV_MOVE and self.PV_MOVE[str(last_move_played)] == 0 and len(
+                self.PV_MOVE) >= 2:
             print('move predicted was played')
-            print('playing move in pv line instantly')
-            play_move_instantly = True
-            best_move = [move for move in self.PV_MOVE.keys() if self.PV_MOVE[move] == 1][0]
 
+            if len(self.PV_MOVE) >= 6:
+                print('playing move in pv line instantly')
+                play_move_instantly = True
+
+            best_move = [move for move in self.PV_MOVE.keys() if self.PV_MOVE[move] == 1][0]
 
             depth = len(self.PV_MOVE)
             self.PV_MOVE.pop(str(last_move_played))
 
-            # change values to match the depths
-            for key in self.PV_MOVE.keys():
-                self.PV_MOVE[key] -= 2
+            while True:
+                if min(self.PV_MOVE.values()) <= 0:
+                    break
+                    # change values to match the depths
+                for key in self.PV_MOVE.keys():
+                    self.PV_MOVE[key] -= 1
         else:
             self.PV_MOVE = dict()
 
@@ -521,11 +539,11 @@ class Engine(Player):
 
             start = time()
             best_set = self.negamax(depth, alpha, beta, [], 100000, True)
-
+            print("best_set at aspiration windows: " + str(best_set))
 
             if len(best_set) > 2:
                 self.reset_PV_MOVE(best_set[2][:])
-                print("pv_move_used: " + str(self.PV_MOVE) + ",   depth: " + str(depth))
+                # print("pv_move_used: " + str(self.PV_MOVE) + ",   depth: " + str(depth))
             total_time += (time() - start)
 
             # if we found a forced checkmate we should stop looking
@@ -533,15 +551,16 @@ class Engine(Player):
                 break
 
             # do another if statement for the len of the pv move
-            if self.should_play_faster and depth >= 4 and best_set[1] is not None and len(best_set[2][:]) >= depth:
+            if self.should_play_faster and total_time >= 3 and best_set[1] is not None and len(best_set[2][:]) >= 1:
                 print('Should_player_faster has been activated ')
                 break
 
-            if total_time >= 7 and best_set[1] is not None and len(best_set[2][:]) >= depth:
+            if total_time >= 7 and best_set[1] is not None and len(best_set[2][:]) >= 2:
                 break
 
             # just in case we only have not completed pv_lines after a long time
-            if total_time >= 30 and best_set[1] is not None and len(best_set[2][:]) >= 2:
+            if total_time >= 13 and best_set[1] is not None and len(best_set[2][:]) >= 1:
+                print("PV_MOVE was not completed")
                 break
 
             val = best_set[0]
@@ -555,7 +574,6 @@ class Engine(Player):
             beta = val + 50
             depth += 1
 
-
         if play_move_instantly:
             best_set = [44444, chess.Move.from_uci(best_move), self.PV_MOVE]
 
@@ -565,6 +583,7 @@ class Engine(Player):
         print("pv_move at the end: " + str(self.PV_MOVE))
 
         print("best_set: " + str(best_set))
+
         return best_set, total_time, depth
 
     def generate_move(self):
@@ -575,14 +594,28 @@ class Engine(Player):
                 opening, best_move = opening_move
                 print('Weight: ' + str(opening))
                 print('Move: ' + self.board.san(best_move))
+
+                # assuming its 0 because it's in the opening book
+                best_move_val = 0
+
             else:
                 self.is_opening = False
                 self.is_middle_game = True
         if self.is_middle_game:
             result = self.aspiration_window()
             print('Result: ' + str(result))
-            best_move_val, best_move, pv_move, total_time, depth = result[0][0], result[0][1], result[0][2], result[1], result[2]
-            print('Engine Move: ' + self.board.san(best_move))
+
+            # crappy fix for now when it disconnects on checkmate found
+            try:
+                best_move_val, best_move, pv_move, total_time, depth = result[0][0], result[0][1], result[0][2], result[
+                    1], result[2]
+            except:
+                print('ERROR IN UNPACKING RESULT POSSBILIY BECAUSE CHECKMATE WAS FOUND')
+                best_move_val, best_move, pv_move, total_time, depth = 0, None, dict(), 0, 0
+
+            if best_move != None:
+                print('Engine Move: ' + self.board.san(best_move))
+
             print('Expected move value: ' + str(best_move_val))
             print('PV Move line: ' + str(pv_move))
             print('PV Move stored in engine: ' + str(self.PV_MOVE))
@@ -591,10 +624,9 @@ class Engine(Player):
             print('Positions evaluated: ' + str(self.count))
             print('Transposition table hits: ' + str(self.hits))
             # if total pieces is less than 5
-            #is_end_game = True
-            #is_middle_game = False
+            # is_end_game = True
+            # is_middle_game = False
         if self.is_end_game:
             pass
 
-        return best_move, self.PV_MOVE, self.tt, self.count
-
+        return best_move, self.PV_MOVE, self.tt, self.count, best_move_val

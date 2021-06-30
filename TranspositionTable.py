@@ -1,6 +1,6 @@
 from collections import OrderedDict, namedtuple
 class LRUCache:
-    '''Store items in the order the keys were last added'''
+    """Store items in the order the keys were last added"""
     def __init__(self, size):
         self.od = OrderedDict()
         self.size = size

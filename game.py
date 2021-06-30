@@ -21,9 +21,9 @@ class Game:
 
         # turn is engine's turn
         if self.whose_turn == self.engine_color:
-            move, pv_move, table, positions = self.engine_player.make_move()
+            move, pv_move, table, positions, best_move_val = self.engine_player.make_move()
             self.print_board()
-            return move, pv_move, table, positions
+            return move, pv_move, table, positions, best_move_val
         else:
             # player made a move
             self.whose_turn = self.engine_color
@@ -31,13 +31,17 @@ class Game:
             try:
                 self.board.push(chess.Move.from_uci(str(player_move)))
             except:
-                print("ILLEGAL MOVE WAS PUSHED TO BOARD")
+                print("ILLEGAL MOVE WAS PUSHED TO BOARD " + str(player_move))
 
             return self.run_half_turn(player_move)
 
 
 PV_MOVE = dict()
 table = LRUCache(1e8)
+
+
+found_force_checkmate = False
+
 if __name__ == '__main__':
 
     total_time = 0
@@ -51,7 +55,7 @@ if __name__ == '__main__':
 
 
 
-        move, board, engine_color, whose_turn, should_play_faster, pondering_pv_move, pondering_pv_table = lichess.run_api(PV_MOVE, table)
+        move, board, engine_color, whose_turn, should_play_faster, pondering_pv_move, pondering_pv_table = lichess.run_api(PV_MOVE, table, found_force_checkmate)
 
         if pondering_pv_move is not None and pondering_pv_table is not None:
             PV_MOVE = pondering_pv_move
@@ -63,11 +67,25 @@ if __name__ == '__main__':
         game = Game(board, engine_color, whose_turn, move, PV_MOVE, table, should_play_faster)
 
         start = time.time()
-        engine_move, pv_move, table, positions = game.run_half_turn(move)
+        engine_move, pv_move, table, positions, best_move_val = game.run_half_turn(move)
         total_time += time.time() - start
+
+        # found a forced checkmate so no point in keep on pondering
+        if best_move_val >= 99000 or best_move_val <= -99000:
+            found_force_checkmate = True
+            print("FOUND FORCE CHECKMATE")
+
+
+        # if the current board is checkmate make found_force_checkmate back to false to reset for the next game
+
+        if game.board.is_checkmate():
+            found_force_checkmate = False
+            print("SETING FORCE CHECKMATE BACK TO FALSE")
+
 
         PV_MOVE = pv_move
         table = table
+
         total_positions += positions
 
         print("Total positions: " + str(total_positions))

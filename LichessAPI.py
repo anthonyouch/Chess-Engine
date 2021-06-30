@@ -80,10 +80,10 @@ class LichessAPI():
             print("engine_color during getting move list: " + str(self.engine_color))
             # if i'm under a minute of time and the opponent has more than 30 seconds than me
             if self.engine_color == chess.WHITE:
-                if white_remaining_time <= 90000 and white_remaining_time <= black_remaining_time + 30000:
+                if white_remaining_time <= 180000 and white_remaining_time <= black_remaining_time + 30000:
                     should_play_faster = True
             elif self.engine_color == chess.BLACK:
-                if black_remaining_time <= 90000 and black_remaining_time <= black_remaining_time + 30000:
+                if black_remaining_time <= 180000 and black_remaining_time <= black_remaining_time + 30000:
                     should_play_faster = True
 
             print("should_player_faster: " + str(should_play_faster))
@@ -166,15 +166,16 @@ class LichessAPI():
 
             # if we found a forced checkmate we should stop looking
             if val >= 99000:
+                # reset pondering pv_move as they can find the forced checkmate by itself
                 return
 
     def play_move(self, move):
         try:
             self.client.bots.make_move(self.game_id, move)
         except:
-            print('ERROR OCCURED WHEN TRYING TO MAKE MOVE IN LICHESS')
+            print('ERROR OCCURED WHEN TRYING TO MAKE MOVE IN LICHESS ' + str(move))
 
-    def run_api(self, PV_MOVE, table):
+    def run_api(self, PV_MOVE, table, found_force_checkmate):
         while True:
 
             self.event_type = self.check_for_event()
@@ -203,7 +204,16 @@ class LichessAPI():
 
                     rt = Thread(target=self.get_latest_human_move)
                     rt.start()
-                    self.pondering(PV_MOVE, table)
+
+                    # only ponder if we haven't found a force checkmate yet
+                    if not found_force_checkmate:
+                        self.pondering(PV_MOVE, table)
+                    else:
+                        print("NOT PONDERING BECAUSE FOUND FORCE CHECKMATE")
+
+                        self.pondering_pv_move = dict()
+                        self.pondering_table = LRUCache(1e8)
+
 
                     print("latest human move: " + str(self.latest_human_move))
 
@@ -211,7 +221,15 @@ class LichessAPI():
 
                 elif self.whose_turn == self.engine_color:
                     print("Turn: Engine")
+
+                    temp_pv = None
+                    temp_pondering = None
+
+                    if found_force_checkmate:
+                        temp_pv = dict()
+                        temp_pondering = LRUCache(1e8)
+
                     # my turn to move, time to relay information to bot
-                    return False, self.board, self.engine_color, self.whose_turn, should_play_faster, None, None
+                    return False, self.board, self.engine_color, self.whose_turn, should_play_faster, temp_pv, temp_pondering
 
 
